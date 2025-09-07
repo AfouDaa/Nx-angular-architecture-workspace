@@ -13,6 +13,7 @@ import {
   STColumn,
   STComponent,
   STContextmenuFn,
+  STData,
   STModule,
   STPage,
   STReq,
@@ -71,21 +72,21 @@ import { Criteria } from './types';
           <div>
             <button
               (click)="onSearch(st)"
-              class="header-button"
               type="button"
               nz-button
               nzType="primary"
+               nzShape="circle"
+            [nzSize]="'large'"
             >
               <span nz-icon nzType="search"></span>
             </button>
-          </div>
-          <div>
             <button
               (click)="onReset(st)"
-              class="header-button"
               type="button"
               nz-button
               nzType="primary"
+              nzShape="circle"
+            [nzSize]="'large'"
             >
               <span nz-icon nzType="reload"></span>
             </button>
@@ -94,11 +95,21 @@ import { Criteria } from './types';
         <div>
           @if(!isVeiwOnly()){
           <button
+            (click)="st.export(data, { filename: 'via-data.xlsx', sheetname: 'user' })"            type="button"
+            nz-button
+            nzType="primary"
+            nzShape="circle"
+            [nzSize]="'large'"
+          >
+            <span nz-icon nzType="download"></span>
+          </button>
+                    <button
             (click)="onAddNew()"
-            class="header-button"
             type="button"
             nz-button
             nzType="primary"
+            nzShape="circle"
+            [nzSize]="'large'"
           >
             <span nz-icon nzType="plus"></span>
           </button>
@@ -129,6 +140,10 @@ import { Criteria } from './types';
   `,
   styles: [
     `
+       [nz-button] {
+        margin-right: 8px;
+        margin-bottom: 12px;
+      }
       .header-tools-wrapper {
         display: flex;
         align-items: center;
@@ -140,9 +155,7 @@ import { Criteria } from './types';
         gap: 1rem;
       }
 
-      .header-button {
-        width: 64px;
-      }
+
     `,
   ],
   exportAs: 'fsiTable',
@@ -165,6 +178,7 @@ export class TableUiComponent {
   response = input.required<STRes>({});
   url = input.required<string>();
   isVeiwOnly = input<boolean>(false);
+  data: STData[] = Array(10000)
 
   /** Outputs (still EventEmitters for parent components) */
   @Output() addNew = new EventEmitter<void>();

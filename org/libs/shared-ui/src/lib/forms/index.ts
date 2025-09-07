@@ -102,8 +102,8 @@ export class Form<T> {
           this.findById(params['id'])
             .pipe(
               take(1),
-              tap((model: T) => {
-                this.parseIncomingResponse(model);
+              tap((model:any) => {
+                this.parseIncomingResponse(model.data);
                 this.setLoading(false);
               }),
               finalize(() => this.setLoading(false))
@@ -144,8 +144,8 @@ export class Form<T> {
    * Override in subclasses for custom mapping
    * @param _response Backend response
    */
-  parseIncomingResponse<R>(_response: R): T {
-    return {} as T;
+  parseIncomingResponse(_response:T):void {
+    return ;
   }
 
   /**

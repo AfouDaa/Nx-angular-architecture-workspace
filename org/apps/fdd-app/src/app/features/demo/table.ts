@@ -12,28 +12,27 @@ import { ApiResponse } from '@org/data-access-layer';
   selector: 'app-table',
   template: `
     <nz-card>
-   <lib-ui-table
-    [columns]="columns()"
-    [contextMenuProvider]="contextMenuProvider"
-    [criteria]="criteria()"
-    [displayedCriteria]="displayedCriteria()"
-    [keywordInput]="keyword()"
-    [noResult]="noResult()"
-    [page]="pager"
-    [pageIndex]="pageIndex()"
-    [pageSize]="pageSize()"
-    [request]="request"
-    [response]="response"
-    [url]="url()"
-    [total]="total()"
-    [loading]="isLoading()"
-    (addNew)="onAdd()"
-    (chooseCriteria)="setCriteria($event)"
-    (keywordChange)="onKeywordChange($event)"
-    (searchEvent)="onSearch($event)"
-    (resetEvent)="onReset($event)"
-></lib-ui-table>
-
+      <lib-ui-table
+        [columns]="columns()"
+        [contextMenuProvider]="contextMenuProvider"
+        [criteria]="criteria()"
+        [displayedCriteria]="displayedCriteria()"
+        [keywordInput]="keyword()"
+        [noResult]="noResult()"
+        [page]="pager"
+        [pageIndex]="pageIndex()"
+        [pageSize]="pageSize()"
+        [request]="request"
+        [response]="response"
+        [url]="url()"
+        [total]="total()"
+        [loading]="isLoading()"
+        (addNew)="onAdd()"
+        (chooseCriteria)="setCriteria($event)"
+        (keywordChange)="onKeywordChange($event)"
+        (searchEvent)="onSearch($event)"
+        (resetEvent)="onReset($event)"
+      ></lib-ui-table>
     </nz-card>
   `,
   standalone: true,
@@ -48,11 +47,11 @@ export class TableComponent extends Table<User> implements OnInit {
   }
   ngOnInit(): void {
     this.initialize();
-    this.criteria .set([
+    this.criteria.set([
       { index: 'firstName', title: 'firstName' },
       { index: 'lastName', title: 'lastName' },
       { index: 'hireDate', title: 'hireDate' },
-    ])
+    ]);
   }
 
   override getColumns(): STColumn[] {
@@ -60,28 +59,21 @@ export class TableComponent extends Table<User> implements OnInit {
       {
         index: 'firstName',
         title: 'First Name',
-        className: 'text-center',
-        fixed: 'left',
-        width: 100,
       },
       {
         index: 'lastName',
         title: 'Last Name',
-        className: 'text-center',
-        fixed: 'left',
-        width: 100,
       },
       {
         index: 'email',
         title: 'Email',
-        width: 150,
+        className: 'text-center',
+        width: 250,
       },
 
       {
         index: 'status',
         title: 'Status',
-        className: 'text-center',
-        width: 100,
       },
 
       {
@@ -89,25 +81,23 @@ export class TableComponent extends Table<User> implements OnInit {
         title: 'Created At',
         dateFormat: 'yyyy-MM-dd',
         type: 'date',
-        className: 'text-center',
-        width: 150,
       },
       {
         index: 'updatedAt',
         title: 'Updated At',
         dateFormat: 'yyyy-MM-dd',
         type: 'date',
-        className: 'text-center',
-        width: 150,
       },
     ];
   }
   override onDelete(_id: string): Observable<unknown> {
     return this._repository.deleteById(_id);
   }
-override processResponse(_data: unknown[], rawData: ApiResponse<User>): User[] {
-  this.total.set(rawData.total);
-  return rawData.data;
-}
-
+  override processResponse(
+    _data: unknown[],
+    rawData: ApiResponse<User>
+  ): User[] {
+    this.total.set(rawData.total);
+    return rawData.data;
+  }
 }

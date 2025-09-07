@@ -10,10 +10,11 @@ import {
   STReq,
   STRes,
 } from '@delon/abc/st';
-import { Observable, of } from 'rxjs';
+import { finalize, Observable, of, take } from 'rxjs';
 import { NavigationMapping } from './types';
 import { ALAIN_I18N_TOKEN } from '@delon/theme';
 import { Criteria, DownloadOption } from './types';
+import { NzMessageService } from 'ng-zorro-antd/message';
 
 /**
  * Generic Table abstraction with reactive state management using Angular signals.
@@ -29,16 +30,17 @@ import { Criteria, DownloadOption } from './types';
  */
 export class Table<T> {
   /** Angular Router helpers */
-  activatedRoute = inject(ActivatedRoute);
-  router = inject(Router);
+  private activatedRoute = inject(ActivatedRoute);
+  private router = inject(Router);
 
   /** Internationalization provider */
-  i18n = inject(ALAIN_I18N_TOKEN);
+  private i18n = inject(ALAIN_I18N_TOKEN);
+  private message = inject(NzMessageService);
 
   /** Reactive state signals */
   isLoading = signal<boolean>(false);
   displayedCriteria = signal<string>('~');
-  keyword = signal<string>('-');
+  keyword = signal<string>('');
   noResult = signal<string | TemplateRef<void>>('No Result Found !!');
   pageIndex = signal<number>(1);
   pageSize = signal<number>(5);
@@ -90,7 +92,42 @@ export class Table<T> {
       }, 2000);
     }
   // merge existing columns with new ones
-  this.columns.update(cols => [...cols, ...this.getColumns()]);
+  this.columns.update(cols => [...cols, ...this.getColumns(),{
+        title: '',
+        buttons: [
+          {
+            iif: () => !this.isVeiwOnly,
+            icon: 'eye',
+            click: console.log,
+          },
+          {
+            iif: () => !this.isVeiwOnly,
+            tooltip: this.i18n.fanyi('app.misc.delete'),
+            icon: 'delete',
+            className: 'text-error',
+            type: 'drawer',
+            click: (_record, _modal, comp) => {
+              this.onDelete(_record, _modal)
+                .pipe(
+                  take(1),
+                  finalize(() => {
+                    this.isLoading.set(false);
+                  })
+                )
+                .subscribe({
+                  next: () => {
+                    this.message.success(this.i18n.fanyi('app.misc.deleted'));
+                    comp?.reload();
+                  },
+                  error: (err) => {
+                    this.message.error(this.i18n.fanyi(err.error.message));
+                  },
+                });
+            },
+          },
+
+        ],
+      },]);
   }
 
   /**
@@ -197,12 +234,15 @@ export class Table<T> {
    */
   onSearch(st: STComponent): void {
     st.req.body = {
-      pn: this.pageIndex,
-      ps: this.pageSize,
+      pn: this.pageIndex(),
+      ps: this.pageSize(),
     };
+    if(this.keyword()){
     st.req.params = {
       [this.selectedCriteria()]: this.keyword(),
     };
+    }
+
     st.reload();
   }
 
