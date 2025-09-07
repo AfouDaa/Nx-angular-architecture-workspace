@@ -5,6 +5,8 @@ import { Observable, map } from 'rxjs';
 import { NzSkeletonModule } from 'ng-zorro-antd/skeleton';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { Repository } from './service';
+import { User } from '@delon/theme';
+import { ApiResponse } from '@org/data-access-layer';
 
 @Component({
   selector: 'app-table',
@@ -24,7 +26,7 @@ import { Repository } from './service';
     [response]="response"
     [url]="url()"
     [total]="total()"
-
+    [loading]="isLoading()"
     (addNew)="onAdd()"
     (chooseCriteria)="setCriteria($event)"
     (keywordChange)="onKeywordChange($event)"
@@ -37,7 +39,7 @@ import { Repository } from './service';
   standalone: true,
   imports: [TableUiComponent, NzSkeletonModule, NzCardModule],
 })
-export class TableComponent extends Table<any> implements OnInit {
+export class TableComponent extends Table<User> implements OnInit {
   _repository = inject(Repository);
 
   constructor() {
@@ -69,41 +71,21 @@ export class TableComponent extends Table<any> implements OnInit {
         fixed: 'left',
         width: 100,
       },
-      { index: 'phone', title: 'Phone', className: 'text-center', width: 100 },
       {
-        index: 'occupation',
-        title: 'occupation',
-        className: 'text-center',
-        width: 100,
-      },
-      {
-        index: 'user.email',
+        index: 'email',
         title: 'Email',
-        className: 'text-center',
         width: 150,
       },
+
       {
-        index: 'user.roles',
-        title: 'Role',
-        className: 'text-center',
-        width: 100,
-      },
-      {
-        index: 'user.status',
+        index: 'status',
         title: 'Status',
         className: 'text-center',
         width: 100,
       },
+
       {
-        index: 'user.lastLogin',
-        title: 'Last Login',
-        dateFormat: 'yyyy-MM-dd',
-        type: 'date',
-        className: 'text-center',
-        width: 150,
-      },
-      {
-        index: 'user.createdAt',
+        index: 'createdAt',
         title: 'Created At',
         dateFormat: 'yyyy-MM-dd',
         type: 'date',
@@ -111,7 +93,7 @@ export class TableComponent extends Table<any> implements OnInit {
         width: 150,
       },
       {
-        index: 'user.updatedAt',
+        index: 'updatedAt',
         title: 'Updated At',
         dateFormat: 'yyyy-MM-dd',
         type: 'date',
@@ -120,12 +102,12 @@ export class TableComponent extends Table<any> implements OnInit {
       },
     ];
   }
-  override onDelete(record: any): Observable<any> {
-    return this._repository.deleteById(record._id);
+  override onDelete(_id: string): Observable<unknown> {
+    return this._repository.deleteById(_id);
   }
-  override processResponse(_data: any[], rawData: any): any {
-    this.total = rawData.total;
-    const res = rawData.data;
-    return res;
-  }
+override processResponse(_data: unknown[], rawData: ApiResponse<User>): User[] {
+  this.total.set(rawData.total);
+  return rawData.data;
+}
+
 }

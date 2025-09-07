@@ -1,1 +1,36 @@
-<p>Auth works!</p>
+<form nz-form [formGroup]="form" (ngSubmit)="submit()" role="form">
+  <nz-tabset [nzAnimated]="false" class="tabs" (nzSelectChange)="switch($event)">
+    <nz-tab [nzTitle]="'Please login with your credentials' | i18n">
+      @if (error) {
+        <nz-alert [nzType]="'error'" [nzMessage]="error" [nzShowIcon]="true" class="mb-lg" />
+      }
+      <nz-form-item>
+        <nz-form-control>
+          <nz-input-group nzSize="large" nzPrefixIcon="user">
+            <input nz-input formControlName="email" placeholder="Please enter email" />
+          </nz-input-group>
+        </nz-form-control>
+      </nz-form-item>
+      <nz-form-item>
+        <nz-form-control>
+          <nz-input-group nzSize="large" nzPrefixIcon="lock">
+            <input nz-input type="password" formControlName="password" placeholder="Please enter your password" />
+          </nz-input-group>
+        </nz-form-control>
+      </nz-form-item>
+    </nz-tab>
+  </nz-tabset>
+  <nz-form-item> </nz-form-item>
+  <nz-form-item>
+    <button nz-button type="submit" nzType="primary" nzSize="large" [nzLoading]="loading" nzBlock>
+      {{ 'login' | i18n }}
+    </button>
+  </nz-form-item>
+</form>
+<!-- <div class="other">
+  {{ 'app.login.sign-in-with' | i18n }}
+  <i nz-tooltip nzTooltipTitle="in fact Auth0 via window" (click)="open('auth0', 'window')" nz-icon nzType="alipay-circle" class="icon"></i>
+  <i nz-tooltip nzTooltipTitle="in fact Github via redirect" (click)="open('github')" nz-icon nzType="taobao-circle" class="icon"></i>
+  <i (click)="open('weibo', 'window')" nz-icon nzType="weibo-circle" class="icon"></i>
+  <a class="register" routerLink="/passport/register">{{ 'app.login.signup' | i18n }}</a>
+</div> -->

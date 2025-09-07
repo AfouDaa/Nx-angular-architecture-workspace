@@ -83,10 +83,10 @@ export class Table<T> {
    * Initializes the table with default columns and loading state.
    */
   initialize(): void {
-    this.setLoading(true);
+    this.isLoading.set(true);
     if (this.response.process) {
       setTimeout(() => {
-        this.setLoading(false);
+        this.isLoading.set(false);
       }, 2000);
     }
   // merge existing columns with new ones
@@ -212,12 +212,5 @@ export class Table<T> {
   setCriteria(criteria: Criteria): void {
     this.displayedCriteria.set(criteria.title);
     this.selectedCriteria.set(criteria.index);
-  }
-
-  /**
-   * Toggle loading state.
-   */
-  setLoading(state: boolean): void {
-    this.isLoading.set(state);
   }
 }

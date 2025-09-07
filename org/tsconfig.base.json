@@ -22,7 +22,10 @@
       "@org/environment": ["libs/environment/src/index.ts"],
       "@org/error-handlers": ["libs/error-handlers/src/index.ts"],
       "@org/package": ["package/src/index.ts"],
-      "@org/shared-ui": ["libs/shared-ui/src/index.ts"]
+      "@org/shared-ui": ["libs/shared-ui/src/index.ts"],
+      "@org/utillitys": ["libs/utillitys/src/index.ts"],
+      "@org/demo": ["apps/fdd-app/src/app/features/demo/module.ts"]
+
     }
   },
   "exclude": ["node_modules", "tmp"]
