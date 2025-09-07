@@ -15,9 +15,15 @@ import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NzModalModule } from 'ng-zorro-antd/modal';
 import { provideNzIcons } from 'ng-zorro-antd/icon';
 import { iconsComponents } from './icon';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { authSimpleInterceptor } from '@delon/auth';
+import { defaultInterceptor } from '@org/core';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+        provideHttpClient(
+      withInterceptors([authSimpleInterceptor, defaultInterceptor])
+    ),
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideRouter(appRoutes),
