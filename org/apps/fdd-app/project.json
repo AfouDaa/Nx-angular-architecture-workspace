@@ -21,7 +21,8 @@
             "input": "apps/fdd-app/public"
           }
         ],
-        "styles": ["apps/fdd-app/src/styles.scss"]
+        "styles": ["apps/fdd-app/src/styles.scss", "node_modules/ng-zorro-antd/ng-zorro-antd.min.css"
+]
       },
       "configurations": {
         "production": {

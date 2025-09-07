@@ -18,6 +18,7 @@
     "@delon/theme": "^20.0.1",
     "@delon/util": "^20.0.1",
     "ng-alain": "^20.0.1",
+    "ng-zorro-antd": "^20.2.1",
     "rxjs": "~7.8.0",
     "zone.js": "~0.15.0"
   },
