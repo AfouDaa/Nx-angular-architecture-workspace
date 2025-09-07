@@ -14,7 +14,16 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@org/auth": ["libs/auth/src/index.ts"],
+      "@org/config": ["libs/config/src/index.ts"],
+      "@org/core": ["libs/core/src/index.ts"],
+      "@org/data-access-layer": ["libs/data-access-layer/src/index.ts"],
+      "@org/environment": ["libs/environment/src/index.ts"],
+      "@org/error-handlers": ["libs/error-handlers/src/index.ts"],
+      "@org/package": ["package/src/index.ts"],
+      "@org/shared-ui": ["libs/shared-ui/src/index.ts"]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }
