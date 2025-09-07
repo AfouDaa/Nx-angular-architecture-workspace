@@ -1,88 +1,118 @@
-import { inject } from '@angular/core';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { inject, signal, computed, effect } from '@angular/core';
 import { FormBuilder, UntypedFormGroup } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NzMessageService } from 'ng-zorro-antd/message';
-import { Observable, combineLatest, concat, iif, of } from 'rxjs';
+import { Observable, of, combineLatest, concat } from 'rxjs';
 import { delay, finalize, take, tap } from 'rxjs/operators';
-import { NavigationMapping } from '../types';
 import { ALAIN_I18N_TOKEN } from '@delon/theme';
+
 /**
- * Enumeration for form modes.
+ * Defines whether the form is in Add or Edit mode
  */
 export enum FormMode {
-  Add,
-  Edit,
+  Add = 'Add',
+  Edit = 'Edit',
 }
 
+/**
+ * Navigation mapping utilities for easier router calls.
+ */
+export interface NavigationMapping {
+  absolutely: (url: string) => Promise<boolean>;
+  relatively: (commands: Array<number | string>) => Promise<boolean>;
+}
+
+/**
+ * 🔹 Base Form class with signals, router navigation, and reactive form utilities.
+ * Extend this class in feature components to build Add/Edit forms consistently.
+ */
 export class Form<T> {
-  i18n = inject(ALAIN_I18N_TOKEN);
+  /** Internationalization service (Delon i18n) */
+  public i18n = inject(ALAIN_I18N_TOKEN);
 
-  activatedRoute = inject(ActivatedRoute);
+  /** Notification service from Ng-Zorro */
+  public message = inject(NzMessageService);
 
-  form: UntypedFormGroup = new UntypedFormGroup({});
+  /** Angular reactive forms builder */
+  public fb = inject(FormBuilder);
 
-  formMode: FormMode = FormMode.Add;
+  /** Router utilities */
+  private activatedRoute = inject(ActivatedRoute);
+  private router = inject(Router);
 
-  isLoading = false;
+  /** Reactive form instance (must be overridden in extending classes) */
+  form = new UntypedFormGroup({});
 
-  message = inject(NzMessageService);
+  // ✅ State management using Angular Signals
+  /** Current form mode (Add/Edit) */
+  formMode = signal<FormMode>(FormMode.Add);
 
-  router = inject(Router);
+  /** Expose enum for templates */
+  FormModeEnum = FormMode;
 
-  useServerForm = false;
+  /** Whether API call or initialization is running */
+  isLoading = signal<boolean>(false);
 
-  _FormBuilder = inject(FormBuilder);
+  /** Whether to rely on server-driven form definitions */
+  useServerForm = signal<boolean>(false);
 
-  id!: any;
+  /** Current entity ID (from route params if editing) */
+  id = signal<string>('null');
+
+  /** Computed signal: true if form is invalid or still validating */
+  isFormInvalid = computed(() => this.form.invalid || this.form.pending);
+
+  constructor() {
+    // Run an effect whenever formMode changes
+    effect(() => {
+      console.log('Form mode changed →', this.formMode());
+    });
+  }
+
   /**
-   * Must be overridden to implement the logic of finding an entity by the given ID.
-   *
-   * @param {number|string} _id
-   * @returns {Observable<T>}
+   * Must be overridden in subclasses:
+   * Fetch entity by ID from API/backend.
+   * @param _id Entity ID
+   * @returns Observable of entity type T
    */
   findById(_id: number | string): Observable<T> {
     return of({} as T);
   }
 
   /**
-   * Generate a static form schema.
-   *
-   * @returns {FormlyFieldConfig[]}
-   */
-
-  /**
-   * Initializes the form.
-   * - Sets loading state
-   * - Retrieves form fields and data based on the form mode
+   * Initializes the form: checks route params,
+   * sets mode to Add or Edit, fetches entity if needed.
    */
   initialize(): void {
     this.setLoading(true);
+
     const data$ = combineLatest([
       this.activatedRoute.params,
       this.activatedRoute.queryParams,
     ]).pipe(
-      delay(1000),
+      delay(1000), // artificial delay (can be removed in prod)
       take(1),
-      tap(([params, queryParams]) => {
-        this.setFormMode(FormMode.Add);
+      tap(([params]) => {
         if (params['id']) {
-          this.setFormMode(FormMode.Edit);
+          // Edit mode → fetch entity
+          this.id.set(params['id']);
+          this.formMode.set(FormMode.Edit);
+
           this.findById(params['id'])
             .pipe(
               take(1),
               tap((model: T) => {
                 this.parseIncomingResponse(model);
-                 this.setLoading(false);
-
-              }),
-              finalize(() => {
                 this.setLoading(false);
-              })
+              }),
+              finalize(() => this.setLoading(false))
             )
             .subscribe();
         } else {
+          // Add mode → just set form ready
           this.setLoading(false);
-          this.setFormMode(FormMode.Add);
+          this.formMode.set(FormMode.Add);
         }
       })
     );
@@ -91,65 +121,55 @@ export class Form<T> {
   }
 
   /**
-   * Navigate to a specified URL or relative route.
-   *
-   * @returns {NavigationMapping} Object with navigation methods
+   * Router navigation helpers
+   * @returns mapping for absolute or relative navigation
    */
   navigate(): NavigationMapping {
     return {
-      absolutely: (url: string): Promise<boolean> =>
-        this.router.navigateByUrl(url),
-      relatively: (commands: Array<number | string>): Promise<boolean> =>
+      absolutely: (url: string) => this.router.navigateByUrl(url),
+      relatively: (commands: Array<number | string>) =>
         this.router.navigate(commands, { relativeTo: this.activatedRoute }),
     };
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  getCopiedData() {}
   /**
-   * Parse and modify the server response of a single entity.
-   *
-   * @param {R} _response
-   * @returns {T}
-   * @method post
+   * Placeholder for copying data between entities (override in child class if needed)
+   */
+  getCopiedData() {
+    /* empty */
+  }
+
+  /**
+   * Parse API response and populate form
+   * Override in subclasses for custom mapping
+   * @param _response Backend response
    */
   parseIncomingResponse<R>(_response: R): T {
     return {} as T;
   }
 
   /**
-   * Prepares the entity to be sent to the server.
-   *
-   * @param {T} _model
-   * @returns {R}
-   * @method Edit
-
+   * Prepare form values to send to backend
+   * Override in subclasses for custom mapping
+   * @param _model Current form model
    */
   prepareOutgoingRequest<R>(_model: T): R {
     return {} as R;
   }
 
   /**
-   * Set the form mode.
-   *
-   * @param {FormMode} formMode
+   * Update form mode manually
+   * @param formMode Add | Edit
    */
   setFormMode(formMode: FormMode): void {
-    this.formMode = formMode;
+    this.formMode.set(formMode);
   }
 
   /**
-   * Set the loading state of the form.
-   *
-   * @param {boolean} state
+   * Update loading state
+   * @param state true = loading, false = idle
    */
   setLoading(state: boolean): void {
-    this.isLoading = state;
-  }
-
-  isFormInvalid(): boolean {
-    return this.form.invalid || this.form.pending;
-
-    // return this.form.invalid || this.form.pending;
+    this.isLoading.set(state);
   }
 }

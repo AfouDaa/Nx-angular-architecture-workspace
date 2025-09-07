@@ -1,7 +1,7 @@
-import { Component, TemplateRef, ViewChild, inject } from '@angular/core';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { TemplateRef, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
-  STChange,
   STColumn,
   STComponent,
   STContextmenuFn,
@@ -10,58 +10,62 @@ import {
   STReq,
   STRes,
 } from '@delon/abc/st';
-import { NzMessageService } from 'ng-zorro-antd/message';
-import { BehaviorSubject, delay, finalize, Observable, of, take } from 'rxjs';
-import { NavigationMapping } from '../types';
+import { Observable, of } from 'rxjs';
+import { NavigationMapping } from './types';
 import { ALAIN_I18N_TOKEN } from '@delon/theme';
+import { Criteria, DownloadOption } from './types';
 
 /**
- * @undocumented
+ * Generic Table abstraction with reactive state management using Angular signals.
+ * Provides built-in support for:
+ * - Pagination
+ * - Search & filter criteria
+ * - Context menu
+ * - Navigation helpers
+ * - Data response processing
+ *
+ * @template T - The type of table records
+ * @author Ahmed Fouda
  */
-export enum DownloadOption {
-  CSV = 0,
-  JSON,
-  PDF,
-}
-
-/**
- * @undocumented
- */
-export interface Criteria {
-  index: string;
-  title: string;
-}
-
 export class Table<T> {
+  /** Angular Router helpers */
   activatedRoute = inject(ActivatedRoute);
-
-  message = inject(NzMessageService);
-
   router = inject(Router);
 
+  /** Internationalization provider */
   i18n = inject(ALAIN_I18N_TOKEN);
-  isLoading = false;
+
+  /** Reactive state signals */
+  isLoading = signal<boolean>(false);
+  displayedCriteria = signal<string>('~');
+  keyword = signal<string>('-');
+  noResult = signal<string | TemplateRef<void>>('No Result Found !!');
+  pageIndex = signal<number>(1);
+  pageSize = signal<number>(5);
+  total = signal<number>(0);
+  selectedCriteria = signal<string>('');
+  isVeiwOnly = signal<boolean>(false);
+  url = signal<string>('');
+
+  /** Table reference & configuration */
   tableRef!: STComponent;
-  columns: STColumn[] = [];
-  criteria: Criteria[] = [];
-  displayedCriteria = '~';
-  keyword = '';
-  noResult: string | TemplateRef<void> = 'No Result Found !!';
+  columns =signal< STColumn[]>([]);
+  criteria=signal< Criteria[]>([]);
+
+  /** Pager configuration */
   pager: STPage = {
     pageSizes: [5, 10, 20, 50, 100],
     position: 'bottom',
     showSize: true,
     zeroIndexed: true,
   };
-  pageIndex = 1;
-  pageSize = 5;
-  total!: number;
-  selectedCriteria = '';
+
+  /** Request configuration */
   request: STReq = {
     method: 'GET',
     body: {
-      pn: this.pageIndex,
-      ps: this.pageSize,
+      pn: this.pageIndex(),
+      ps: this.pageSize(),
     },
     allInBody: true,
     reName: {
@@ -70,12 +74,14 @@ export class Table<T> {
     },
   };
 
+  /** Response handler */
   response: STRes = {
     process: this.processResponse.bind(this),
   };
-  isVeiwOnly = false;
-  url = '';
 
+  /**
+   * Initializes the table with default columns and loading state.
+   */
   initialize(): void {
     this.setLoading(true);
     if (this.response.process) {
@@ -83,94 +89,52 @@ export class Table<T> {
         this.setLoading(false);
       }, 2000);
     }
-
-    this.columns = [
-      ...this.getColumns(),
-      // {
-      //   title: '',
-      //   buttons: [
-      //     {
-      //       iif: () => !this.isVeiwOnly,
-      //       icon: 'eye',
-      //       click: console.log,
-      //     },
-      //     {
-      //       iif: () => !this.isVeiwOnly,
-      //       tooltip: this.i18n.fanyi('app.misc.delete'),
-      //       icon: 'delete',
-      //       className: 'text-error',
-      //       type: 'drawer',
-      //       drawer: {
-      //         title: this.i18n.fanyi('app.misc.delete'),
-      //         component: DeleteDrawerComponent,
-      //       },
-      //       click: (_record, _modal, comp) => {
-      //         this.onDelete(_record, _modal)
-      //           .pipe(
-      //             take(1),
-      //             finalize(() => {
-      //               this.setLoading(false);
-      //             })
-      //           )
-      //           .subscribe({
-      //             next: () => {
-      //               this.message.success(this.i18n.fanyi('app.misc.deleted'));
-      //               comp?.reload();
-      //             },
-      //             error: (err) => {
-      //               this.message.error(this.i18n.fanyi(err.error.message));
-      //             },
-      //           });
-      //       },
-      //     },
-      //     // {
-      //     //   icon: 'ellipsis',
-      //     //   children: [
-      //     //     {
-      //     //       type: 'static',
-      //     //       icon: 'edit',
-      //     //       click: (_record, modal) => {
-      //     //       }
-      //     //     }
-      //     //   ]
-      //     // },
-      //   ],
-      // },
-    ];
+  // merge existing columns with new ones
+  this.columns.update(cols => [...cols, ...this.getColumns()]);
   }
 
-  contextMenuProvider: STContextmenuFn = (options): STContextmenuItem[] => {
+  /**
+   * Context menu provider for table rows.
+   */
+  contextMenuProvider: STContextmenuFn = (
+    options,
+  ): STContextmenuItem[] => {
     if (options.type !== 'head') {
       return [
         {
           text: 'Edit',
-          fn: (item) => {
+          fn: () => {
             this.navigate().relatively([`../edit/${options.data['_id']}`]);
           },
         },
         {
           text: 'Delete',
-          // eslint-disable-next-line @typescript-eslint/no-empty-function
-          fn: (item) => {},
+          fn: () => {
+            /* empty */
+          },
         },
       ];
-    } else {
-      return [];
     }
+    return [];
   };
 
+  /**
+   * Downloads table data in the given format.
+   * @param option Format option (CSV, JSON, PDF)
+   */
   download(option: DownloadOption): Observable<unknown> {
     return of();
   }
 
-  onDelete(record: any, modal: any): Observable<any> {
+  /**
+   * Handles record deletion.
+   */
+  onDelete(record: unknown, modal: unknown): Observable<unknown> {
     return of({});
   }
 
   /**
-   * Navigate absolutely or relatively
-   *
-   * @returns {NavigationMapping}
+   * Navigate absolutely or relatively.
    */
   navigate(): NavigationMapping {
     return {
@@ -182,34 +146,38 @@ export class Table<T> {
   }
 
   /**
-   *  implementation of getColumns().
-   * @returns {Tabel Colums}
+   * Override to define table columns.
    */
-
   getColumns(): STColumn[] {
     return [];
   }
 
   /**
    * Default implementation of response parsing.
-   *
-   * @param {any[]} data
-   * @param {any} rawData
-   * @returns {any[]}
+   * @param _data Data array
+   * @param _rawData Raw response
    */
-
-  processResponse(data: any[], rawData: any): any[] {
+  processResponse(_data: unknown[], _rawData: unknown): unknown[] {
     return [];
   }
 
+  /**
+   * Trigger navigation to add new record form.
+   */
   onAdd(): void {
     this.navigate().relatively([`../new`]);
   }
 
+  /**
+   * Update the search keyword.
+   */
   onKeywordChange(k: string): void {
-    this.keyword = k;
+    this.keyword.set(k);
   }
 
+  /**
+   * Reset search and filters.
+   */
   onReset(st: STComponent): void {
     this.tableRef = st;
     st.req.body = {
@@ -217,32 +185,39 @@ export class Table<T> {
       ps: this.pageSize,
       criteria: {},
     };
-    st.req.params ={}
-    this.keyword = '';
-    this.selectedCriteria = '';
-    this.displayedCriteria = '~';
+    st.req.params = {};
+    this.keyword.set('');
+    this.selectedCriteria.set('');
+    this.displayedCriteria.set('');
     st.reload();
   }
 
+  /**
+   * Perform a search with the current keyword and selected criteria.
+   */
   onSearch(st: STComponent): void {
     st.req.body = {
       pn: this.pageIndex,
       ps: this.pageSize,
     };
-    st.req.params ={
-      [this.selectedCriteria]: this.keyword,
-    }
+    st.req.params = {
+      [this.selectedCriteria()]: this.keyword(),
+    };
     st.reload();
   }
 
+  /**
+   * Set the currently selected search criteria.
+   */
   setCriteria(criteria: Criteria): void {
-    this.displayedCriteria = criteria.title;
-    this.selectedCriteria = criteria.index;
+    this.displayedCriteria.set(criteria.title);
+    this.selectedCriteria.set(criteria.index);
   }
 
+  /**
+   * Toggle loading state.
+   */
   setLoading(state: boolean): void {
-    this.isLoading = state;
+    this.isLoading.set(state);
   }
 }
-
-export * from './ui-component';
